@@ -1,0 +1,36 @@
+{
+    "name": "solana-raydium-module",
+    "version": "1.0.0",
+    "description": "Professional OOP-based TypeScript SDK for Raydium Swaps (Sniper Logic & Dynamic Gas)",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts",
+        "lint": "tsc --noEmit"
+    },
+    "keywords": [
+        "solana",
+        "raydium",
+        "swap",
+        "trading-bot",
+        "sniper",
+        "sdk",
+        "typescript"
+    ],
+    "author": "Your Name",
+    "license": "ISC",
+    "dependencies": {
+        "@raydium-io/raydium-sdk": "^1.3.1-beta.58",
+        "@solana/spl-token": "^0.4.14",
+        "@solana/web3.js": "^1.91.0",
+        "axios": "^1.6.8",
+        "bs58": "^5.0.0",
+        "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.7",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.4.5"
+    }
+}

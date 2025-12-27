@@ -1,0 +1,111 @@
+# 🌪️ Solana Raydium Jito Sniper
+
+> **A high-speed, professional-grade Solana trading bot module integrated with Jito Block Engine for atomic, bribed transaction execution on Raydium.**
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
+[![Solana](https://img.shields.io/badge/Solana-Web3.js-black.svg)](https://solana.com/)
+[![Raydium](https://img.shields.io/badge/Raydium-V4/AMM-purple.svg)](https://raydium.io/)
+[![Jito](https://img.shields.io/badge/Jito-MEV-green.svg)](https://www.jito.wtf/)
+
+This module is designed for performance and reliability, bypassing standard RPC transaction propagation by using **Jito Bundles**. This ensures higher inclusion rates, protection against sandwich attacks (MEV), and blazing-fast execution for sniping.
+
+---
+
+## ✨ Key Features
+
+- **🚀 Jito Bundle Integration**: Sends transactions directly to the Jito Block Engine (Amsterdam/Mainnet), carrying a "tip" (bribe) to validators for expedited processing.
+- **⚡ On-Chain Pool Fetching**: Bypasses slow API calls by scanning the blockchain directly (V4 Layouts) to find liquidity pools instantly.
+- **🛡️ Atomic Transactions**: Swaps and Jito Tips are bundled into a single atomic transaction—if the tip fails, the swap fails (and vice-versa).
+- **🔢 Auto-Decimal Logic**: Automatically handles token decimal math, removing the need for hardcoded values.
+- **🏗️ OOP Architecture**: Clean, modular TypeScript `RaydiumSwap` class that separates logic (Core), configuration (Config), and execution (Jito).
+
+---
+
+## 🛠️ Prerequisites
+
+- **Node.js** (v18 or higher)
+- **Solana Wallet** with a small amount of SOL (for tips + gas).
+- **Helius RPC URL** (or any fast RPC like Quicknode/Triton) for rapid on-chain data fetching.
+
+---
+
+## 📦 Installation
+
+1. **Clone and Install:**
+
+   ```bash
+   git clone <REPO_URL>
+   cd solana-raydium-module
+   npm install
+   ```
+
+2. **Configure Environment:**
+
+   Create a `.env` file in the root directory:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Add your credentials:
+
+   ```env
+   # Your Private Key (Base58 String)
+   PRIVATE_KEY=your_private_key_here
+
+   # Fast RPC URL (Recommended: Helius)
+   HELIUS_RPC_URL=https://mainnet.helius-rpc.com/?api-key=...
+   ```
+
+---
+
+## 🚀 Usage
+
+### 1. Configure Target
+Open `src/index.ts` and set your target token mint and amount:
+
+```typescript
+const TARGET_TOKEN = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC (Example)
+const BUY_AMOUNT_SOL = 0.001;
+const SLIPPAGE_PERCENT = 10;
+```
+
+### 2. Run the Bot
+Execute the sniper setup:
+
+```bash
+npm run dev
+```
+
+You should see output indicating successful Jito Bundle submission:
+
+```
+🔥 Initializing Sniper Bot...
+💼 Wallet Loaded: <YOUR_WALLET_ADDRESS>
+
+⚡ Fast-Swap BUY: 0.001 | Mint: EPjFW...
+🔍 Scanning Blockchain for Pool Account...
+🧩 Found Market ID: ...
+✅ Pool Keys Constructed Successfully!
+🚀 Jito Bundle Sent: https://explorer.jito.wtf/bundle/<BUNDLE_ID>
+```
+
+---
+
+## 📂 Project Structure
+
+```
+src/
+├── config/
+│   └── config.ts       # Jito Block Engine URLs, Tip Accounts, Constants
+├── core/
+│   ├── JitoExecutor.ts # Handles Tip instruction creation & Bundle submission
+│   └── RaydiumSwap.ts  # Main Logic: Pool finding, Swap construction, Jito handoff
+├── types/
+│   └── types.ts        # Interfaces for Wallet, Config, and Options
+└── index.ts            # Entry point (Main Execution Script)
+```
+
+## ⚠️ Disclaimer
+
+**Use at your own risk.** Trading on Solana (especially sniping) carries financial risk. This software is provided "as is" without warranty of any kind. Ensure you understand how Jito Tips work before increasing bribe amounts.
