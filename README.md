@@ -14,8 +14,11 @@ This module is designed for performance and reliability, bypassing standard RPC 
 ## ✨ Key Features
 
 - **🚀 Jito Bundle Integration**: Sends transactions directly to the Jito Block Engine (Amsterdam/Mainnet), carrying a "tip" (bribe) to validators for expedited processing.
-- **⚡ On-Chain Pool Fetching**: Bypasses slow API calls by scanning the blockchain directly (V4 Layouts) to find liquidity pools instantly.
+- **⚡ Background Blockhash Polling**: Latency killer! Fetches and caches the latest blockhash in the background (400ms interval), ensuring **instant** transaction creation when you trigger a swap.
 - **🛡️ Atomic Transactions**: Swaps and Jito Tips are bundled into a single atomic transaction—if the tip fails, the swap fails (and vice-versa).
+- **🔎 Bundle Confirmation Logic**: Automatically polls the Jito API to confirm if your bundle was accepted or dropped.
+- **🔁 Reverse Pool Support**: Smartly handles both `Base=Token` and `Base=SOL` pairs, allowing you to trade any token regardless of how the pool was initialized.
+- **🏎️ Sniper Mode (Local Math)**: Bypasses slow `fetchInfo` network calls by using local math and accepting 100% slippage for maximum speed.
 - **🔢 Auto-Decimal Logic**: Automatically handles token decimal math, removing the need for hardcoded values.
 - **🏗️ OOP Architecture**: Clean, modular TypeScript `RaydiumSwap` class that separates logic (Core), configuration (Config), and execution (Jito).
 
@@ -61,33 +64,43 @@ This module is designed for performance and reliability, bypassing standard RPC 
 
 ## 🚀 Usage
 
-### 1. Configure Target
-Open `src/index.ts` and set your target token mint and amount:
+### Run the Bot (Dynamic Command Line Arguments)
 
-```typescript
-const TARGET_TOKEN = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC (Example)
-const BUY_AMOUNT_SOL = 0.001;
-const SLIPPAGE_PERCENT = 10;
-```
-
-### 2. Run the Bot
-Execute the sniper setup:
+No need to edit the code for every trade. Simply provide the Token Address and Buy Amount (SOL) as arguments.
 
 ```bash
-npm run dev
+npm run dev <TOKEN_MINT> [AMOUNT_SOL]
 ```
 
-You should see output indicating successful Jito Bundle submission:
+**Example:**
+
+```bash
+# Buy 0.1 SOL worth of USDC
+npm run dev EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v 0.1
+```
+
+**What happens next?**
+1.  **Scanner**: Finds the Raydium Pool on-chain (Standard or Reverse).
+2.  **Sniper**: Checks background cache for blockhash, constructs transaction instantly using local math.
+3.  **Executor**: Sends atomic bundle to Jito Block Engine.
+4.  **Confirm**: Polls Jito API to confirm the bundle status (Landed or Dropped).
+
+### Output Preview:
 
 ```
-🔥 Initializing Sniper Bot...
-💼 Wallet Loaded: <YOUR_WALLET_ADDRESS>
+🔥 Initializing Sniper for Token: EPjFW...
+wv Buying Amount: 0.1 SOL
 
-⚡ Fast-Swap BUY: 0.001 | Mint: EPjFW...
 🔍 Scanning Blockchain for Pool Account...
 🧩 Found Market ID: ...
 ✅ Pool Keys Constructed Successfully!
-🚀 Jito Bundle Sent: https://explorer.jito.wtf/bundle/<BUNDLE_ID>
+⚡ Fast-Swap BUY: 0.1 | Mint: EPjFW...
+🧮 Fast-Swap: Skipping pre-calculation for max speed...
+
+🚀 Bundle Sent! ID: 3e8f...a9b
+⏳ Waiting for Jito Confirmation...
+🔎 Status: landed
+✅ BUNDLE LANDED SUCCESSFULLY!
 ```
 
 ---
@@ -99,11 +112,11 @@ src/
 ├── config/
 │   └── config.ts       # Jito Block Engine URLs, Tip Accounts, Constants
 ├── core/
-│   ├── JitoExecutor.ts # Handles Tip instruction creation & Bundle submission
-│   └── RaydiumSwap.ts  # Main Logic: Pool finding, Swap construction, Jito handoff
+│   ├── JitoExecutor.ts # Handles Tip instruction creation & Bundle submission + Status Polling
+│   └── RaydiumSwap.ts  # Main Logic: Pool finding (Reverse/Std), Swap construction, Jito handoff
 ├── types/
 │   └── types.ts        # Interfaces for Wallet, Config, and Options
-└── index.ts            # Entry point (Main Execution Script)
+└── index.ts            # Entry point (Main Execution Script, CLI Args)
 ```
 
 ## ⚠️ Disclaimer

@@ -62,4 +62,23 @@ export class JitoExecutor {
             throw error;
         }
     }
+
+    public static async getBundleStatus(bundleId: string) {
+        // Poll Jito API for status
+        // Note: Using the same endpoint but different method
+        try {
+            const response = await axios.post(`${JITO_BLOCK_ENGINE_URL}/api/v1/bundles`, {
+                jsonrpc: "2.0",
+                id: 1,
+                method: "getBundleStatuses",
+                params: [[bundleId]]
+            }, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return response.data.result;
+        } catch (error: any) {
+            console.error("❌ Error fetching bundle status:", error.response?.data || error.message);
+            return null;
+        }
+    }
 }

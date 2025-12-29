@@ -1,88 +1,77 @@
+// src/index.ts
+
 import { RaydiumSwap } from './core/RaydiumSwap';
-import { Keypair, VersionedTransaction, Transaction } from '@solana/web3.js';
+import { JitoExecutor } from './core/JitoExecutor'; // Import JitoExecutor
+import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import dotenv from 'dotenv';
 import { IWallet } from './types/types';
 
-// Load Environment Variables
 dotenv.config();
 
-/**
- * 🔐 SECURITY: Wallet Wrapper
- * This class converts your Keypair into the Raydium SDK format.
- */
 class NodeWallet implements IWallet {
     constructor(private payer: Keypair) { }
     get publicKey() { return this.payer.publicKey; }
-
-    async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
-        if (tx instanceof VersionedTransaction) {
-            tx.sign([this.payer]);
-        } else {
-            (tx as Transaction).sign(this.payer);
-        }
-        return tx;
-    }
-
-    async signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> {
-        return txs.map(t => {
-            if (t instanceof VersionedTransaction) t.sign([this.payer]);
-            else (t as Transaction).sign(this.payer);
-            return t;
-        });
-    }
+    async signTransaction(tx: any) { tx.sign([this.payer]); return tx; }
+    async signAllTransactions(txs: any[]) { return txs.map(t => { t.sign([this.payer]); return t; }); }
 }
 
-// 🚀 MAIN EXECUTION FUNCTION
 (async () => {
-    console.log("🔥 Initializing Sniper Bot...");
+    // 1. Argument Handling (No more hardcoding!)
+    const args = process.argv.slice(2); // Get arguments from command line
+    const TARGET_TOKEN = args[0];
+    const AMOUNT = args[1] ? parseFloat(args[1]) : 0.001; // Default 0.001 if not provided
 
-    // 1. Validation Checks
+    if (!TARGET_TOKEN) {
+        console.error("❌ ERROR: Please provide a token address.");
+        console.error("👉 Usage: npm run dev <TOKEN_MINT> [AMOUNT]");
+        process.exit(1);
+    }
+
+    console.log(`🔥 Initializing Sniper for Token: ${TARGET_TOKEN}`);
+    console.log(`wv Buying Amount: ${AMOUNT} SOL`);
+
+    // 2. Setup
     const privateKey = process.env.PRIVATE_KEY;
-    const rpcUrl = process.env.HELIUS_RPC_URL; // Make sure .env has HELIUS_RPC_URL
+    const rpcUrl = process.env.HELIUS_RPC_URL;
+    if (!privateKey || !rpcUrl) throw new Error("❌ Check .env file");
 
-    if (!privateKey) throw new Error("❌ MISSING PRIVATE KEY in .env");
-    if (!rpcUrl) throw new Error("❌ MISSING RPC URL in .env");
-
-    // 2. Setup Secure Wallet
-    // BS58 decode is standard for Solana Private Keys
     const keypair = Keypair.fromSecretKey(bs58.decode(privateKey));
     const wallet = new NodeWallet(keypair);
-
-    console.log(`💼 Wallet Loaded: ${wallet.publicKey.toBase58()}`);
-
-    // 3. Initialize The Trader (Helius + Local Logic)
-    const trader = new RaydiumSwap({
-        rpcUrl: rpcUrl,
-        wallet: wallet
-    });
-
-    // ==========================================
-    // 🎯 TARGET CONFIGURATION (CHANGE THIS!)
-    // ==========================================
-
-    // Example Token (USDC or any Memecoin CA)
-    const TARGET_TOKEN = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC for testing
-    const BUY_AMOUNT_SOL = 0.001; // Small amount for testing
-    const SLIPPAGE_PERCENT = 10;  // High slippage for volatility
+    const trader = new RaydiumSwap({ rpcUrl, wallet });
 
     try {
-        console.log(`\n🔫 SNIPING TARGET: ${TARGET_TOKEN}`);
-
-        // 4. EXECUTE THE TRADE
-        // This function will now use the Jito Bundle we set up in RaydiumSwap.ts
+        // 3. Execute Trade
         const result = await trader.execute({
             action: "buy",
             tokenMint: TARGET_TOKEN,
-            amount: BUY_AMOUNT_SOL,
-            slippagePct: SLIPPAGE_PERCENT,
-            useDynamicFee: true // Logic will handle the Jito Tip
+            amount: AMOUNT,
+            slippagePct: 10,
+            useDynamicFee: true
         });
 
-        // 5. Result Output
-        if (result.success) {
-            console.log(`\n✅ SUCCESS! Bundle ID/Tx: ${result.signature}`);
-            console.log(`🔗 Check Bundle: https://explorer.jito.wtf/bundle/${result.signature}`);
+        if (result.success && result.signature) {
+            console.log(`\n🚀 Bundle Sent! ID: ${result.signature}`);
+            console.log("⏳ Waiting for Jito Confirmation...");
+
+            // 4. VERIFY STATUS (The Missing Piece)
+            let status = null;
+            // Poll for 5 seconds max
+            for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+                const bundleData = await JitoExecutor.getBundleStatus(result.signature);
+
+                if (bundleData && bundleData.value && bundleData.value.length > 0) {
+                    status = bundleData.value[0].confirmation_status;
+                    console.log(`🔎 Status: ${status}`);
+
+                    if (status === 'confirmed' || status === 'finalized') {
+                        console.log("✅ BUNDLE LANDED SUCCESSFULLY!");
+                        process.exit(0);
+                    }
+                }
+            }
+            console.log("⚠️ Bundle status unknown (Check Solscan).");
         } else {
             console.error(`\n❌ FAILED: ${result.error}`);
         }
